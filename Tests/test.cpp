@@ -1,56 +1,68 @@
 #include "pch.h"
 
-#include"Machine.h"
+#include"DFA.h"
+#include"DFABuilder.h"
 #include<string>
+#include<vector>
 
-/*
-Deux moyen de modeliser une machine :
-	- implémentation simple avec un tableau 2D des états et transitions
-		- Besoin de nommer les transitions
-		-
-*/
 
 TEST(MachineTests, single_state_machine)
 {
-	Machine machine;
-	State* state_a = machine.addState("A");
-	machine.setInitialState(state_a);
-	EXPECT_EQ(state_a, machine.currentState());
+	DFABuilder builder;
+	builder.addState("A");
+	builder.setInitialState("A");
+	DFA machine = builder.buildMachine();
+	EXPECT_EQ("A", machine.currentState());
 }
 
 TEST(StateTests, transition_between_two_states)
 {
-	State state_a("A");
-	State state_b("B");
+	DFABuilder builder;
+	builder.addState("A");
+	builder.addState("B");
+	builder.addSignal(0);
 
-	state_a.addTransition(0, &state_b);
+	builder.setInitialState("A");
+	builder.setTransition("A", 0, "B");
+
+	DFA machine = builder.buildMachine();
+	machine.trigger(0);
 	
-	EXPECT_EQ(state_a.trigger(0), &state_b);
+	EXPECT_EQ(machine.currentState(), "B");
 }
 
-TEST(MachineTests, transition_between_two_states)
+TEST(StateTests, single_state_machine)
 {
-	Machine machine;
-	State* state_a = machine.addState("A");
-	State* state_b = machine.addState("B");
+	DFABuilder builder;
+	builder.addState("A");
+	builder.setInitialState("A");
 
-	machine.setInitialState(state_a);
+	DFA machine = builder.buildMachine();
 
-	state_a->addTransition(0, state_b);
-	state_b->addTransition(0, state_a);
-
-	EXPECT_EQ(state_a, machine.currentState());
-	machine.trigger(0);
-	EXPECT_EQ(state_b, machine.currentState());
-	machine.trigger(0);
-	EXPECT_EQ(state_a, machine.currentState());
+	EXPECT_EQ(machine.currentState(), "A");
 }
 
-/*TEST(Machine, single_state_machine)
+TEST(StateTests, scenario)
 {
-	Machine machine;
-	State* state_a = machine.addState("A");
-	State* state_b = machine.addState("B");
-	machine.setInitialState(state_a);
-	EXPECT_EQ(state_a, machine.currentState());
-}*/
+	DFABuilder builder;
+	builder.addState("A");
+	builder.addState("B");
+	builder.addState("C");
+
+	builder.setFinalStates({ "C" });
+
+	builder.setInitialState("A");
+
+	builder.addSignal(0);
+	builder.addSignal(1);
+
+	builder.setTransition("A", 1, "B");
+	builder.setTransition("B", 0, "C");
+	builder.setTransition("B", 1, "A");
+	builder.setTransition("C", 0, "B");
+
+	DFA machine = builder.buildMachine();
+
+	EXPECT_TRUE(machine.run({ 1,0 }));
+	EXPECT_FALSE(machine.run({ 1,1 }));
+}
